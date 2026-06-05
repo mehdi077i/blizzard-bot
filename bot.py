@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord.ui import View
+from discord.ui import View, Button
 import os
 from dotenv import load_dotenv
 
@@ -17,6 +17,7 @@ CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
 SUPPORT_ROLE = "Tiket supporter"
 
 # ================= Ticket System =================
+ticket_counter = 1  # شمارنده شماره تیکت
 
 class TicketView(View):
     def __init__(self):
@@ -30,8 +31,8 @@ class TicketView(View):
     async def ertebat(self, interaction: discord.Interaction, button: discord.ui.Button):
         await create_ticket(interaction, "Ertebat ba HG")
 
-
 async def create_ticket(interaction, reason):
+    global ticket_counter
     guild = interaction.guild
 
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
@@ -48,13 +49,16 @@ async def create_ticket(interaction, reason):
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
+    # شماره تیکت
+    channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
+    ticket_counter += 1
+
     channel = await guild.create_text_channel(
-        name=f"ticket-{interaction.user.name}".lower(),
+        name=channel_name,
         category=category,
         overwrites=overwrites
     )
 
-    # ارسال پیام + ذخیره owner
     await channel.send(
         f"{interaction.user.mention} تیکت شما ساخته شد ✅ دلیل: **{reason}**",
         view=CloseTicketView(interaction.user.id)
@@ -64,7 +68,6 @@ async def create_ticket(interaction, reason):
         f"🎫 تیکت ساخته شد: {channel.mention}",
         ephemeral=True
     )
-
 
 class CloseTicketView(View):
     def __init__(self, owner_id: int):
