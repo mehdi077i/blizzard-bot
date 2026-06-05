@@ -15,9 +15,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
 SUPPORT_ROLE = "Tiket supporter"
+ticket_counter = 1  # شمارنده شماره تیکت
 
 # ================= Ticket System =================
-ticket_counter = 1  # شمارنده شماره تیکت
 
 class TicketView(View):
     def __init__(self):
@@ -31,10 +31,12 @@ class TicketView(View):
     async def ertebat(self, interaction: discord.Interaction, button: discord.ui.Button):
         await create_ticket(interaction, "Ertebat ba HG")
 
+
 async def create_ticket(interaction, reason):
     global ticket_counter
     guild = interaction.guild
 
+    # پیدا کردن یا ساخت کتگوری
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
@@ -53,6 +55,7 @@ async def create_ticket(interaction, reason):
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
     ticket_counter += 1
 
+    # ساخت چنل در پایین‌ترین جایگاه کتگوری
     channel = await guild.create_text_channel(
         name=channel_name,
         category=category,
@@ -69,6 +72,7 @@ async def create_ticket(interaction, reason):
         ephemeral=True
     )
 
+
 class CloseTicketView(View):
     def __init__(self, owner_id: int):
         super().__init__(timeout=None)
@@ -76,7 +80,6 @@ class CloseTicketView(View):
 
     @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         role = discord.utils.get(interaction.guild.roles, name=SUPPORT_ROLE)
 
         is_owner = interaction.user.id == self.owner_id
@@ -91,12 +94,12 @@ class CloseTicketView(View):
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
+
 # ================= Welcome System =================
 
 @bot.event
 async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦")
-
     if channel:
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
@@ -105,8 +108,8 @@ async def on_member_join(member):
         )
         embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
         embed.set_footer(text="Enjoy your stay ❄️")
-
         await channel.send(embed=embed)
+
 
 # ================= Commands =================
 
@@ -117,6 +120,9 @@ async def ping(ctx):
 @bot.command()
 async def ticket(ctx):
     await ctx.send("❄ Blizzard Ticket Dashboard ❄", view=TicketView())
+
+
+# ================= Ready =================
 
 @bot.event
 async def on_ready():
