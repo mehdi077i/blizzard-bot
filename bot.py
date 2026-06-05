@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View
+from discord import app_commands
 import os
 from dotenv import load_dotenv
 
@@ -15,7 +16,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
 SUPPORT_ROLE = "Tiket supporter"
-ticket_counter = 1  # شمارنده شماره تیکت
+
+ticket_counter = 1
 
 # ================= Ticket System =================
 
@@ -36,8 +38,8 @@ async def create_ticket(interaction, reason):
     global ticket_counter
     guild = interaction.guild
 
-    # پیدا کردن یا ساخت کتگوری
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
+
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
@@ -51,11 +53,9 @@ async def create_ticket(interaction, reason):
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
-    # شماره تیکت
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
     ticket_counter += 1
 
-    # ساخت چنل در پایین‌ترین جایگاه کتگوری
     channel = await guild.create_text_channel(
         name=channel_name,
         category=category,
@@ -74,12 +74,13 @@ async def create_ticket(interaction, reason):
 
 
 class CloseTicketView(View):
-    def __init__(self, owner_id: int):
+    def __init__(self, owner_id):
         super().__init__(timeout=None)
         self.owner_id = owner_id
 
     @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+
         role = discord.utils.get(interaction.guild.roles, name=SUPPORT_ROLE)
 
         is_owner = interaction.user.id == self.owner_id
@@ -94,22 +95,31 @@ class CloseTicketView(View):
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
-
-# ================= Welcome System =================
+# ================= Welcome =================
 
 @bot.event
 async def on_member_join(member):
-    channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦")
+
+    channel = discord.utils.get(
+        member.guild.text_channels,
+        name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦"
+    )
+
     if channel:
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
             description=f"Glad to have you here, {member.mention}!",
             color=0x00bfff
         )
-        embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
-        embed.set_footer(text="Enjoy your stay ❄️")
-        await channel.send(embed=embed)
 
+        embed.set_author(
+            name=member.display_name,
+            icon_url=member.display_avatar.url
+        )
+
+        embed.set_footer(text="Enjoy your stay ❄️")
+
+        await channel.send(embed=embed)
 
 # ================= Commands =================
 
@@ -119,13 +129,26 @@ async def ping(ctx):
 
 @bot.command()
 async def ticket(ctx):
-    await ctx.send("❄ Blizzard Ticket Dashboard ❄", view=TicketView())
+    await ctx.send(
+        "❄ Blizzard Ticket Dashboard ❄",
+        view=TicketView()
+    )
 
+# ================= Slash Command /rob =================
+
+@bot.tree.command(name="rob", description="Send any text")
+@app_commands.describe(text="متنی که میخوای ارسال بشه")
+async def rob(interaction: discord.Interaction, text: str):
+
+    await interaction.response.send_message(text)
 
 # ================= Ready =================
 
 @bot.event
 async def on_ready():
+
+    await bot.tree.sync()
+
     print(f"{bot.user} is online!")
 
 bot.run(TOKEN)
