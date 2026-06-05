@@ -8,9 +8,11 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
+# ================= INTENTS (مهم) =================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
+intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -61,7 +63,6 @@ async def create_ticket(interaction, reason):
         overwrites=overwrites
     )
 
-    # ✅ پیام داخل کادر
     await channel.send(
         f"```\n{interaction.user.name} تیکت شما ساخته شد\nدلیل: {reason}\n```",
         view=CloseTicketView()
@@ -83,19 +84,27 @@ class CloseTicketView(View):
         await interaction.channel.delete()
 
 
-# ================= Welcome System =================
+# ================= Welcome System (FIXED) =================
 
 @bot.event
 async def on_member_join(member):
-    channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝗰𝗼𝗺𝗲")
+    channel = discord.utils.get(
+        member.guild.text_channels,
+        name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦"
+    )
+
     if channel:
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
             description=f"Glad to have you here, {member.mention}!",
             color=0x00bfff
         )
-        embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
+        embed.set_author(
+            name=member.display_name,
+            icon_url=member.display_avatar.url
+        )
         embed.set_footer(text="Enjoy your stay ❄️")
+
         await channel.send(embed=embed)
 
 
@@ -116,7 +125,7 @@ async def ticket(ctx):
     await ctx.send(embed=embed, view=TicketView())
 
 
-# ================= Slash Command /rob =================
+# ================= Slash Command =================
 
 @bot.tree.command(name="rob", description="Send any text")
 @app_commands.describe(text="متنی که میخوای ارسال بشه")
@@ -130,7 +139,7 @@ async def rob(interaction: discord.Interaction, text: str):
     await interaction.response.send_message(embed=embed)
 
 
-# ================= Ready =================
+# ================= READY =================
 
 @bot.event
 async def on_ready():
