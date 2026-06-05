@@ -37,12 +37,15 @@ async def create_ticket(interaction, reason):
     global ticket_counter
     guild = interaction.guild
 
+    # پیدا کردن یا ساخت کتگوری
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
+    # رول ساپورت
     role = discord.utils.get(guild.roles, name=SUPPORT_ROLE)
 
+    # دسترسی‌ها
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
@@ -50,6 +53,7 @@ async def create_ticket(interaction, reason):
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
+    # شماره تیکت
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
     ticket_counter += 1
 
@@ -59,11 +63,13 @@ async def create_ticket(interaction, reason):
         overwrites=overwrites
     )
 
+    # فرستادن پیام داخل چنل با دکمه Close
     await channel.send(
         f"{interaction.user.mention} تیکت شما ساخته شد ✅ دلیل: **{reason}**",
         view=CloseTicketView()
     )
 
+    # پاسخ فوری به اینتراکشن برای جلوگیری از خطا
     await interaction.response.send_message(
         f"🎫 تیکت ساخته شد: {channel.mention}",
         ephemeral=True
@@ -79,11 +85,11 @@ class CloseTicketView(View):
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
-# ================= Welcome =================
+# ================= Welcome System =================
 
 @bot.event
 async def on_member_join(member):
-    channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝘤𝗼𝗺𝗲")
+    channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝗰𝗼𝗺𝗲")
     if channel:
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
@@ -102,10 +108,12 @@ async def ping(ctx):
 
 @bot.command()
 async def ticket(ctx):
-    await ctx.send(
-        "❄ Blizzard Ticket Dashboard ❄",
-        view=TicketView()
+    embed = discord.Embed(
+        title="❄ Blizzard Ticket System ❄",
+        description="یکی از گزینه‌ها رو انتخاب کن:",
+        color=0x00bfff
     )
+    await ctx.send(embed=embed, view=TicketView())
 
 # ================= Slash Command /rob =================
 
