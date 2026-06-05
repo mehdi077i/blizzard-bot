@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View
 import os
 from dotenv import load_dotenv
 
@@ -14,6 +14,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
+SUPPORT_ROLE = "Tiket supporter"
 
 # ================= Ticket System =================
 
@@ -29,35 +30,34 @@ class TicketView(View):
     async def ertebat(self, interaction: discord.Interaction, button: discord.ui.Button):
         await create_ticket(interaction, "Ertebat ba HG")
 
+
 async def create_ticket(interaction, reason):
     guild = interaction.guild
 
-    # پیدا کردن یا ساخت کتگوری
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
-    # دسترسی‌ها: همه نمی‌بینند، کاربر و ساپورت می‌بینند
+    role = discord.utils.get(guild.roles, name=SUPPORT_ROLE)
+
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
     }
 
-    # رول ساپورت
-    role = discord.utils.get(guild.roles, name="Tiket supporter")
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
-    # ساخت چنل در پایین‌ترین جایگاه کتگوری
     channel = await guild.create_text_channel(
         name=f"ticket-{interaction.user.name}".lower(),
         category=category,
         overwrites=overwrites
     )
 
+    # ارسال پیام + ذخیره owner
     await channel.send(
         f"{interaction.user.mention} تیکت شما ساخته شد ✅ دلیل: **{reason}**",
-        view=CloseTicketView()
+        view=CloseTicketView(interaction.user.id)
     )
 
     await interaction.response.send_message(
@@ -65,13 +65,26 @@ async def create_ticket(interaction, reason):
         ephemeral=True
     )
 
+
 class CloseTicketView(View):
-    def __init__(self):
+    def __init__(self, owner_id: int):
         super().__init__(timeout=None)
+        self.owner_id = owner_id
 
     @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # همه می‌تونن ببندن
+
+        role = discord.utils.get(interaction.guild.roles, name=SUPPORT_ROLE)
+
+        is_owner = interaction.user.id == self.owner_id
+        is_support = role in interaction.user.roles if role else False
+
+        if not (is_owner or is_support):
+            return await interaction.response.send_message(
+                "❌ فقط صاحب تیکت یا ساپورت می‌تونه ببنده!",
+                ephemeral=True
+            )
+
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
@@ -80,6 +93,7 @@ class CloseTicketView(View):
 @bot.event
 async def on_member_join(member):
     channel = discord.utils.get(member.guild.text_channels, name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦")
+
     if channel:
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
@@ -88,6 +102,7 @@ async def on_member_join(member):
         )
         embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
         embed.set_footer(text="Enjoy your stay ❄️")
+
         await channel.send(embed=embed)
 
 # ================= Commands =================
@@ -99,8 +114,6 @@ async def ping(ctx):
 @bot.command()
 async def ticket(ctx):
     await ctx.send("❄ Blizzard Ticket Dashboard ❄", view=TicketView())
-
-# ================= Ready =================
 
 @bot.event
 async def on_ready():
