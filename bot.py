@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
-# ================= INTENTS (مهم) =================
+# ================= INTENTS =================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -21,7 +21,42 @@ SUPPORT_ROLE = "Tiket supporter"
 ticket_counter = 1
 
 
-# ================= Ticket System =================
+# ================= WELCOME CHANNEL =================
+WELCOME_CHANNEL_NAME = "💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦"
+
+WELCOME_IMAGE = "https://media.discordapp.net/attachments/1360652773636575525/1512134315633283275/shayan.png"
+
+
+# ================= WELCOME SYSTEM =================
+@bot.event
+async def on_member_join(member):
+
+    channel = discord.utils.get(
+        member.guild.text_channels,
+        name=WELCOME_CHANNEL_NAME
+    )
+
+    if channel:
+        embed = discord.Embed(
+            title="❄️ Welcome to Blizzard ❄️",
+            description=f"Welcome {member.mention} to the server!",
+            color=0x00bfff
+        )
+
+        embed.set_author(
+            name=member.display_name,
+            icon_url=member.display_avatar.url
+        )
+
+        # ✅ عکس ولکام
+        embed.set_image(url=WELCOME_IMAGE)
+
+        embed.set_footer(text="Enjoy your stay ❄️")
+
+        await channel.send(embed=embed)
+
+
+# ================= TICKET SYSTEM =================
 
 class TicketView(View):
     def __init__(self):
@@ -84,31 +119,7 @@ class CloseTicketView(View):
         await interaction.channel.delete()
 
 
-# ================= Welcome System (FIXED) =================
-
-@bot.event
-async def on_member_join(member):
-    channel = discord.utils.get(
-        member.guild.text_channels,
-        name="💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦"
-    )
-
-    if channel:
-        embed = discord.Embed(
-            title="❄️ Welcome to Blizzard ❄️",
-            description=f"Glad to have you here, {member.mention}!",
-            color=0x00bfff
-        )
-        embed.set_author(
-            name=member.display_name,
-            icon_url=member.display_avatar.url
-        )
-        embed.set_footer(text="Enjoy your stay ❄️")
-
-        await channel.send(embed=embed)
-
-
-# ================= Commands =================
+# ================= COMMANDS =================
 
 @bot.command()
 async def ping(ctx):
@@ -125,7 +136,7 @@ async def ticket(ctx):
     await ctx.send(embed=embed, view=TicketView())
 
 
-# ================= Slash Command =================
+# ================= SLASH COMMAND =================
 
 @bot.tree.command(name="rob", description="Send any text")
 @app_commands.describe(text="متنی که میخوای ارسال بشه")
