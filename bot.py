@@ -14,9 +14,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
-SUPPORT_ROLE = "Tiket supporter"
 
-# ---------------- Ticket System ----------------
+# ================= Ticket System =================
 
 class TicketView(View):
     def __init__(self):
@@ -30,7 +29,6 @@ class TicketView(View):
     async def ertebat(self, interaction: discord.Interaction, button: discord.ui.Button):
         await create_ticket(interaction, "Ertebat ba HG")
 
-
 async def create_ticket(interaction, reason):
     guild = interaction.guild
 
@@ -39,20 +37,20 @@ async def create_ticket(interaction, reason):
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
-    # رول ساپورت
-    role = discord.utils.get(guild.roles, name=SUPPORT_ROLE)
-
-    # دسترسی‌ها
+    # دسترسی‌ها: همه نمی‌بینند، کاربر و ساپورت می‌بینند
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
     }
+
+    # رول ساپورت
+    role = discord.utils.get(guild.roles, name="Tiket supporter")
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
-    # ساخت چنل
+    # ساخت چنل در پایین‌ترین جایگاه کتگوری
     channel = await guild.create_text_channel(
-        name=f"ticket-{interaction.user.name}",
+        name=f"ticket-{interaction.user.name}".lower(),
         category=category,
         overwrites=overwrites
     )
@@ -67,22 +65,17 @@ async def create_ticket(interaction, reason):
         ephemeral=True
     )
 
-
 class CloseTicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
     @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        role = discord.utils.get(interaction.guild.roles, name=SUPPORT_ROLE)
-        if role not in interaction.user.roles:
-            await interaction.response.send_message("❌ شما اجازه بستن تیکت را ندارید!", ephemeral=True)
-            return
-
+        # همه می‌تونن ببندن
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
-# ---------------- Welcome System ----------------
+# ================= Welcome System =================
 
 @bot.event
 async def on_member_join(member):
@@ -97,7 +90,7 @@ async def on_member_join(member):
         embed.set_footer(text="Enjoy your stay ❄️")
         await channel.send(embed=embed)
 
-# ---------------- Commands ----------------
+# ================= Commands =================
 
 @bot.command()
 async def ping(ctx):
@@ -106,6 +99,8 @@ async def ping(ctx):
 @bot.command()
 async def ticket(ctx):
     await ctx.send("❄ Blizzard Ticket Dashboard ❄", view=TicketView())
+
+# ================= Ready =================
 
 @bot.event
 async def on_ready():
