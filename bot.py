@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View
 from discord import app_commands
 import os
 from dotenv import load_dotenv
@@ -37,23 +37,20 @@ async def create_ticket(interaction, reason):
     global ticket_counter
     guild = interaction.guild
 
-    # پیدا کردن یا ساخت کتگوری
     category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
-    # رول ساپورت
     role = discord.utils.get(guild.roles, name=SUPPORT_ROLE)
 
-    # دسترسی‌ها
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
     }
+
     if role:
         overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
-    # شماره تیکت
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
     ticket_counter += 1
 
@@ -63,13 +60,11 @@ async def create_ticket(interaction, reason):
         overwrites=overwrites
     )
 
-    # فرستادن پیام داخل چنل با دکمه Close
     await channel.send(
         f"{interaction.user.mention} تیکت شما ساخته شد ✅ دلیل: **{reason}**",
         view=CloseTicketView()
     )
 
-    # پاسخ فوری به اینتراکشن برای جلوگیری از خطا
     await interaction.response.send_message(
         f"🎫 تیکت ساخته شد: {channel.mention}",
         ephemeral=True
@@ -84,6 +79,7 @@ class CloseTicketView(View):
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
+
 
 # ================= Welcome System =================
 
@@ -100,6 +96,7 @@ async def on_member_join(member):
         embed.set_footer(text="Enjoy your stay ❄️")
         await channel.send(embed=embed)
 
+
 # ================= Commands =================
 
 @bot.command()
@@ -115,12 +112,20 @@ async def ticket(ctx):
     )
     await ctx.send(embed=embed, view=TicketView())
 
+
 # ================= Slash Command /rob =================
 
 @bot.tree.command(name="rob", description="Send any text")
 @app_commands.describe(text="متنی که میخوای ارسال بشه")
 async def rob(interaction: discord.Interaction, text: str):
-    await interaction.response.send_message(text)
+
+    embed = discord.Embed(
+        description=f"```{text}```",
+        color=0x00bfff
+    )
+
+    await interaction.response.send_message(embed=embed)
+
 
 # ================= Ready =================
 
@@ -128,5 +133,6 @@ async def rob(interaction: discord.Interaction, text: str):
 async def on_ready():
     await bot.tree.sync()
     print(f"{bot.user} is online!")
+
 
 bot.run(TOKEN)
