@@ -18,6 +18,7 @@ CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
 SUPPORT_ROLE = "Tiket supporter"
 ticket_counter = 1
 
+
 # ================= Ticket System =================
 
 class TicketView(View):
@@ -60,8 +61,9 @@ async def create_ticket(interaction, reason):
         overwrites=overwrites
     )
 
+    # ✅ پیام داخل کادر
     await channel.send(
-        f"{interaction.user.mention} تیکت شما ساخته شد ✅ دلیل: **{reason}**",
+        f"```\n{interaction.user.name} تیکت شما ساخته شد\nدلیل: {reason}\n```",
         view=CloseTicketView()
     )
 
@@ -77,7 +79,7 @@ class CloseTicketView(View):
 
     @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
+        await interaction.response.send_message("```🔒 تیکت بسته شد```", ephemeral=True)
         await interaction.channel.delete()
 
 
@@ -101,7 +103,8 @@ async def on_member_join(member):
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send("🏓 Pong!")
+    await ctx.send("```🏓 Pong!```")
+
 
 @bot.command()
 async def ticket(ctx):
@@ -120,7 +123,7 @@ async def ticket(ctx):
 async def rob(interaction: discord.Interaction, text: str):
 
     embed = discord.Embed(
-        description=f"```{text}```",
+        description=f"```\n{text}\n```",
         color=0x00bfff
     )
 
