@@ -5,6 +5,7 @@ from discord import app_commands
 import os
 from dotenv import load_dotenv
 import json
+import asyncio
 
 # ================= LOAD TOKEN =================
 load_dotenv()
@@ -25,6 +26,7 @@ WELCOME_CHANNEL_ID = 1345757711211434034
 WELCOME_IMAGE = "https://media.discordapp.net/attachments/1360652773636575525/1512134315633283275/shayan.png"
 
 TICKET_FILE = "ticket_counter.json"
+WELCOME_LOG = set()  # جلوگیری از multiple welcome
 
 # ================= HELPER FUNCTIONS =================
 def load_ticket_counter():
@@ -43,9 +45,12 @@ ticket_counter = load_ticket_counter()
 # ================= WELCOME SYSTEM =================
 @bot.event
 async def on_member_join(member):
-    # فقط وقتی fully ready شد
     if not bot.is_ready():
+        await bot.wait_until_ready()
+    if member.id in WELCOME_LOG:
         return
+    WELCOME_LOG.add(member.id)
+
     channel = bot.get_channel(WELCOME_CHANNEL_ID)
     if channel:
         embed = discord.Embed(
@@ -73,53 +78,72 @@ class TicketView(View):
 
 async def create_ticket(interaction, reason):
     global ticket_counter
-    guild = interaction.guild
 
-    category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
-    if not category:
-        category = await guild.create_category(CATEGORY_NAME)
+    try:
+        guild = interaction.guild
 
-    role = guild.get_role(SUPPORT_ROLE_ID)
-    if role is None:
-        await interaction.response.send_message("❌ رول ساپورت پیدا نشد!", ephemeral=True)
-        return
+        # defer فوری
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
 
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(view_channel=False),
-        interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-        role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
-    }
+        # گرفتن یا ساخت category
+        category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
+        if not category:
+            category = await guild.create_category(CATEGORY_NAME)
 
-    channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
-    ticket_counter += 1
-    save_ticket_counter(ticket_counter)  # ذخیره دائمی
+        role = guild.get_role(SUPPORT_ROLE_ID)
+        if role is None:
+            await interaction.followup.send("❌ رول ساپورت پیدا نشد!", ephemeral=True)
+            return
 
-    channel = await guild.create_text_channel(
-        name=channel_name,
-        category=category,
-        overwrites=overwrites
-    )
+        # جلوگیری از duplicate ticket
+        existing = [ch for ch in category.channels if getattr(ch, "owner", None) == interaction.user]
+        if existing:
+            await interaction.followup.send(f"❌ شما قبلا تیکت ساختید: {existing[0].mention}", ephemeral=True)
+            return
 
-    # set owner attribute برای بررسی بستن تیکت
-    setattr(channel, "owner", interaction.user)
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+            role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+        }
 
-    embed = discord.Embed(
-        title="🎫 Ticket Created",
-        description=f"👤 User: {interaction.user.mention}\n📌 Reason: {reason}",
-        color=0x3498db
-    )
-    embed.set_footer(text="Blizzard Support System")
+        channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
+        ticket_counter += 1
+        save_ticket_counter(ticket_counter)
 
-    await channel.send(
-        content=f"{interaction.user.mention} | {role.mention}",
-        embed=embed,
-        view=CloseTicketView()
-    )
+        channel = await guild.create_text_channel(
+            name=channel_name,
+            category=category,
+            overwrites=overwrites
+        )
 
-    await interaction.response.send_message(
-        f"🎫 تیکت ساخته شد: {channel.mention}",
-        ephemeral=True
-    )
+        setattr(channel, "owner", interaction.user)
+
+        embed = discord.Embed(
+            title="🎫 Ticket Created",
+            description=f"👤 User: {interaction.user.mention}\n📌 Reason: {reason}",
+            color=0x3498db
+        )
+        embed.set_footer(text="Blizzard Support System")
+
+        await channel.send(
+            content=f"{interaction.user.mention} | {role.mention}",
+            embed=embed,
+            view=CloseTicketView()
+        )
+
+        await interaction.followup.send(
+            f"🎫 تیکت ساخته شد: {channel.mention}",
+            ephemeral=True
+        )
+
+    except Exception as e:
+        print("Ticket error:", e)
+        try:
+            await interaction.followup.send("❌ خطا در ساخت تیکت!", ephemeral=True)
+        except:
+            pass
 
 # ================= CLOSE TICKET =================
 class CloseTicketView(View):
