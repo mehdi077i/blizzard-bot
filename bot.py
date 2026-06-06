@@ -4,6 +4,7 @@ from discord.ui import View
 from discord import app_commands
 import os
 from dotenv import load_dotenv
+import json
 
 # ================= LOAD TOKEN =================
 load_dotenv()
@@ -23,11 +24,28 @@ SUPPORT_ROLE_ID = 1512090091391029409
 WELCOME_CHANNEL_ID = 1345757711211434034
 WELCOME_IMAGE = "https://media.discordapp.net/attachments/1360652773636575525/1512134315633283275/shayan.png"
 
-ticket_counter = 1
+TICKET_FILE = "ticket_counter.json"
+
+# ================= HELPER FUNCTIONS =================
+def load_ticket_counter():
+    if os.path.exists(TICKET_FILE):
+        with open(TICKET_FILE, "r") as f:
+            data = json.load(f)
+            return data.get("counter", 1)
+    return 1
+
+def save_ticket_counter(counter):
+    with open(TICKET_FILE, "w") as f:
+        json.dump({"counter": counter}, f)
+
+ticket_counter = load_ticket_counter()
 
 # ================= WELCOME SYSTEM =================
 @bot.event
 async def on_member_join(member):
+    # فقط وقتی fully ready شد
+    if not bot.is_ready():
+        return
     channel = bot.get_channel(WELCOME_CHANNEL_ID)
     if channel:
         embed = discord.Embed(
@@ -74,12 +92,16 @@ async def create_ticket(interaction, reason):
 
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
     ticket_counter += 1
+    save_ticket_counter(ticket_counter)  # ذخیره دائمی
 
     channel = await guild.create_text_channel(
         name=channel_name,
         category=category,
         overwrites=overwrites
     )
+
+    # set owner attribute برای بررسی بستن تیکت
+    setattr(channel, "owner", interaction.user)
 
     embed = discord.Embed(
         title="🎫 Ticket Created",
