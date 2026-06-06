@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord.ui import View
-from discord import app_commands
 import os
 from dotenv import load_dotenv
 import json
@@ -76,66 +75,58 @@ class TicketView(View):
 async def create_ticket(interaction, reason):
     global ticket_counter
 
-    try:
-        await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
 
-        guild = interaction.guild
+    guild = interaction.guild
 
-        category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
-        if not category:
-            category = await guild.create_category(CATEGORY_NAME)
+    category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
+    if not category:
+        category = await guild.create_category(CATEGORY_NAME)
 
-        role = guild.get_role(SUPPORT_ROLE_ID)
-        if not role:
-            await interaction.followup.send("❌ Support role not found", ephemeral=True)
+    role = guild.get_role(SUPPORT_ROLE_ID)
+    if not role:
+        await interaction.followup.send("❌ Support role not found", ephemeral=True)
+        return
+
+    # جلوگیری از تیکت تکراری (درست و پایدار)
+    for ch in category.channels:
+        if ch.topic == str(interaction.user.id):
+            await interaction.followup.send(f"❌ شما قبلاً تیکت دارید: {ch.mention}", ephemeral=True)
             return
 
-        # جلوگیری از تیکت تکراری
-        for ch in category.channels:
-            if ch.topic == str(interaction.user.id):
-                await interaction.followup.send(f"❌ شما قبلاً تیکت دارید: {ch.mention}", ephemeral=True)
-                return
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+        role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+    }
 
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-            role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
-        }
+    channel = await guild.create_text_channel(
+        name=f"ticket-{ticket_counter}",
+        category=category,
+        overwrites=overwrites,
+        topic=str(interaction.user.id)
+    )
 
-        channel = await guild.create_text_channel(
-            name=f"ticket-{ticket_counter}",
-            category=category,
-            overwrites=overwrites,
-            topic=str(interaction.user.id)  # 👈 مالک واقعی
-        )
+    ticket_counter += 1
+    save_ticket_counter(ticket_counter)
 
-        ticket_counter += 1
-        save_ticket_counter(ticket_counter)
+    embed = discord.Embed(
+        title="🎫 Ticket Created",
+        description=f"👤 User: {interaction.user.mention}\n📌 Reason: {reason}",
+        color=0x3498db
+    )
+    embed.set_footer(text="Blizzard Support System")
 
-        embed = discord.Embed(
-            title="🎫 Ticket Created",
-            description=f"👤 User: {interaction.user.mention}\n📌 Reason: {reason}",
-            color=0x3498db
-        )
-        embed.set_footer(text="Blizzard Support System")
+    await channel.send(
+        content=f"{interaction.user.mention} | {role.mention}",
+        embed=embed,
+        view=CloseTicketView()
+    )
 
-        await channel.send(
-            content=f"{interaction.user.mention} | {role.mention}",
-            embed=embed,
-            view=CloseTicketView()
-        )
-
-        await interaction.followup.send(
-            f"🎫 تیکت ساخته شد: {channel.mention}",
-            ephemeral=True
-        )
-
-    except Exception as e:
-        print("Ticket error:", e)
-        try:
-            await interaction.followup.send("❌ خطا در ساخت تیکت!", ephemeral=True)
-        except:
-            pass
+    await interaction.followup.send(
+        f"🎫 تیکت ساخته شد: {channel.mention}",
+        ephemeral=True
+    )
 
 # ================= CLOSE TICKET =================
 class CloseTicketView(View):
