@@ -21,7 +21,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 CATEGORY_NAME = "✉️・Ticket"
 SUPPORT_ROLE_ID = 1512090091391029409
 WELCOME_CHANNEL_ID = 1345757711211434034
-
 WELCOME_IMAGE = "https://media.discordapp.net/attachments/1360652773636575525/1512134315633283275/shayan.png"
 
 ticket_counter = 1
@@ -107,10 +106,8 @@ class CloseTicketView(View):
 
     @discord.ui.button(label="🔒 بستن تیکت", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # فقط صاحب تیکت یا ساپورت بتونه ببنده
         role = interaction.guild.get_role(SUPPORT_ROLE_ID)
-
-        if interaction.user != interaction.channel.owner and role not in interaction.user.roles:
+        if interaction.user != getattr(interaction.channel, 'owner', None) and role not in interaction.user.roles:
             await interaction.response.send_message("❌ اجازه نداری!", ephemeral=True)
             return
 
@@ -135,14 +132,16 @@ async def ticket(ctx):
 @bot.tree.command(name="rob", description="Send green embed")
 @app_commands.describe(text="متن")
 async def rob(interaction: discord.Interaction, text: str):
+    await interaction.response.defer()
     embed = discord.Embed(title=text, color=0x2ecc71)
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="lose", description="Send red embed")
 @app_commands.describe(text="متن")
 async def lose(interaction: discord.Interaction, text: str):
+    await interaction.response.defer()
     embed = discord.Embed(title=text, color=0xe74c3c)
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 # ================= READY =================
 @bot.event
