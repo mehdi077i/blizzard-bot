@@ -18,15 +18,10 @@ intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ================= SETTINGS =================
-CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
-
-# ✅ رول ساپورت با Role ID
+CATEGORY_NAME = "✉️・Ticket"
 SUPPORT_ROLE_ID = 1512090091391029409
-
-# آیدی چنل ولکام
 WELCOME_CHANNEL_ID = 1345757711211434034
 
-# عکس ولکام
 WELCOME_IMAGE = "https://media.discordapp.net/attachments/1360652773636575525/1512134315633283275/shayan.png"
 
 ticket_counter = 1
@@ -39,7 +34,7 @@ async def on_member_join(member):
         embed = discord.Embed(
             title="❄️ Welcome to Blizzard ❄️",
             description=f"Welcome {member.mention} to the server!",
-            color=0x00bfff
+            color=0x3498db
         )
         embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
         embed.set_image(url=WELCOME_IMAGE)
@@ -51,13 +46,13 @@ class TicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="📝 Ozviat", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="📝 عضویت", style=discord.ButtonStyle.blurple)
     async def ozviat(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await create_ticket(interaction, "Ozviat")
+        await create_ticket(interaction, "عضویت")
 
-    @discord.ui.button(label="📞 Ertebat ba HG", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="📞 ارتباط با HG", style=discord.ButtonStyle.blurple)
     async def ertebat(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await create_ticket(interaction, "Ertebat ba HG")
+        await create_ticket(interaction, "ارتباط با HG")
 
 async def create_ticket(interaction, reason):
     global ticket_counter
@@ -67,10 +62,9 @@ async def create_ticket(interaction, reason):
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
-    # دریافت رول با ID
     role = guild.get_role(SUPPORT_ROLE_ID)
     if role is None:
-        await interaction.response.send_message("❌ رول Ticket supporter پیدا نشد!", ephemeral=True)
+        await interaction.response.send_message("❌ رول ساپورت پیدا نشد!", ephemeral=True)
         return
 
     overwrites = {
@@ -91,49 +85,63 @@ async def create_ticket(interaction, reason):
     embed = discord.Embed(
         title="🎫 Ticket Created",
         description=f"👤 User: {interaction.user.mention}\n📌 Reason: {reason}",
-        color=0x00ff00
+        color=0x3498db
     )
     embed.set_footer(text="Blizzard Support System")
 
-    await channel.send(content=f"{interaction.user.mention} | {role.mention}", embed=embed, view=CloseTicketView())
-    await interaction.response.send_message(f"🎫 تیکت ساخته شد: {channel.mention}", ephemeral=True)
+    await channel.send(
+        content=f"{interaction.user.mention} | {role.mention}",
+        embed=embed,
+        view=CloseTicketView()
+    )
+
+    await interaction.response.send_message(
+        f"🎫 تیکت ساخته شد: {channel.mention}",
+        ephemeral=True
+    )
 
 # ================= CLOSE TICKET =================
 class CloseTicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="🔒 Close Ticket", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="🔒 بستن تیکت", style=discord.ButtonStyle.red)
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(description="🔒 تیکت بسته شد", color=0xff0000)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        # فقط صاحب تیکت یا ساپورت بتونه ببنده
+        role = interaction.guild.get_role(SUPPORT_ROLE_ID)
+
+        if interaction.user != interaction.channel.owner and role not in interaction.user.roles:
+            await interaction.response.send_message("❌ اجازه نداری!", ephemeral=True)
+            return
+
+        await interaction.response.send_message("🔒 تیکت بسته شد", ephemeral=True)
         await interaction.channel.delete()
 
-# ================= NORMAL COMMANDS =================
+# ================= COMMANDS =================
 @bot.command()
 async def ping(ctx):
-    embed = discord.Embed(description="🏓 Pong!", color=0x00ff00)
-    await ctx.send(embed=embed)
+    await ctx.send("🏓 Pong!")
 
 @bot.command()
 async def ticket(ctx):
-    embed = discord.Embed(title="❄ Blizzard Ticket System ❄", description="یکی از گزینه‌ها رو انتخاب کن:", color=0x00ff00)
+    embed = discord.Embed(
+        title="❄ Blizzard Ticket System ❄",
+        description="یکی از گزینه‌ها رو انتخاب کن:",
+        color=0x3498db
+    )
     await ctx.send(embed=embed, view=TicketView())
 
-# ================= /ROB COMMAND =================
+# ================= SLASH COMMANDS =================
 @bot.tree.command(name="rob", description="Send green embed")
-@app_commands.describe(text="متنی که میخوای ارسال بشه")
+@app_commands.describe(text="متن")
 async def rob(interaction: discord.Interaction, text: str):
-    clean_text = text.strip() or "\u200b"
-    embed = discord.Embed(title=clean_text, color=0x00ff00)
+    embed = discord.Embed(title=text, color=0x2ecc71)
     await interaction.response.send_message(embed=embed)
 
-# ================= /LOSE COMMAND =================
 @bot.tree.command(name="lose", description="Send red embed")
-@app_commands.describe(text="متنی که میخوای ارسال بشه")
+@app_commands.describe(text="متن")
 async def lose(interaction: discord.Interaction, text: str):
-    clean_text = text.strip() or "\u200b"
-    embed = discord.Embed(title=clean_text, color=0xff0000)
+    embed = discord.Embed(title=text, color=0xe74c3c)
     await interaction.response.send_message(embed=embed)
 
 # ================= READY =================
@@ -142,5 +150,5 @@ async def on_ready():
     await bot.tree.sync()
     print(f"{bot.user} is online!")
 
-# ================= RUN BOT =================
+# ================= RUN =================
 bot.run(TOKEN)
