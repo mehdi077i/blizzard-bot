@@ -22,7 +22,9 @@ bot = commands.Bot(
 
 # ================= SETTINGS =================
 CATEGORY_NAME = "✉️・𝗧𝗶𝗰𝗸𝗲𝘁"
-SUPPORT_ROLE = "Ticket suporter"
+
+# ✅ اسم دقیق رول
+SUPPORT_ROLE = "Ticket supporter"
 
 WELCOME_CHANNEL_NAME = "💠・𝘞𝘦𝘭𝘤𝘰𝘮𝘦"
 
@@ -102,29 +104,38 @@ async def create_ticket(interaction, reason):
     if not category:
         category = await guild.create_category(CATEGORY_NAME)
 
+    # ✅ گرفتن رول ساپورت
     role = discord.utils.get(
         guild.roles,
         name=SUPPORT_ROLE
     )
 
+    # ❌ اگر رول پیدا نشد
+    if role is None:
+        await interaction.response.send_message(
+            "❌ رول Ticket supporter پیدا نشد",
+            ephemeral=True
+        )
+        return
+
     overwrites = {
+
         guild.default_role: discord.PermissionOverwrite(
             view_channel=False
         ),
 
         interaction.user: discord.PermissionOverwrite(
             view_channel=True,
-            send_messages=True
+            send_messages=True,
+            read_message_history=True
         ),
-    }
 
-    # دسترسی رول تیکت
-    if role:
-        overwrites[role] = discord.PermissionOverwrite(
+        role: discord.PermissionOverwrite(
             view_channel=True,
             send_messages=True,
             read_message_history=True
         )
+    }
 
     channel_name = f"ticket-{ticket_counter}-{interaction.user.name}".lower()
 
@@ -145,7 +156,12 @@ async def create_ticket(interaction, reason):
         color=0x00ff00
     )
 
+    embed.set_footer(
+        text="Blizzard Support System"
+    )
+
     await channel.send(
+        content=f"{interaction.user.mention} | {role.mention}",
         embed=embed,
         view=CloseTicketView()
     )
@@ -171,8 +187,13 @@ class CloseTicketView(View):
         button: discord.ui.Button
     ):
 
+        embed = discord.Embed(
+            description="🔒 تیکت بسته شد",
+            color=0xff0000
+        )
+
         await interaction.response.send_message(
-            "🔒 تیکت بسته شد",
+            embed=embed,
             ephemeral=True
         )
 
@@ -218,11 +239,10 @@ async def rob(
     text: str
 ):
 
-    # جلوگیری از خالی بودن
     clean_text = text.strip()
 
     if not clean_text:
-        clean_text = "‎"
+        clean_text = "\u200b"
 
     embed = discord.Embed(
         title=clean_text,
@@ -251,7 +271,7 @@ async def lose(
     clean_text = text.strip()
 
     if not clean_text:
-        clean_text = "‎"
+        clean_text = "\u200b"
 
     embed = discord.Embed(
         title=clean_text,
