@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.ui import View
+from discord import app_commands
 import os
 from dotenv import load_dotenv
 import json
@@ -88,7 +89,7 @@ async def create_ticket(interaction, reason):
         await interaction.followup.send("❌ Support role not found", ephemeral=True)
         return
 
-    # جلوگیری از تیکت تکراری (درست و پایدار)
+    # جلوگیری از تیکت تکراری
     for ch in category.channels:
         if ch.topic == str(interaction.user.id):
             await interaction.followup.send(f"❌ شما قبلاً تیکت دارید: {ch.mention}", ephemeral=True)
@@ -159,6 +160,21 @@ async def ticket(ctx):
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong!")
+
+# ================= SLASH COMMANDS =================
+@bot.tree.command(name="rob", description="Send green embed")
+@app_commands.describe(text="متن")
+async def rob(interaction: discord.Interaction, text: str):
+    await interaction.response.defer()
+    embed = discord.Embed(title=text, color=0x2ecc71)
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="lose", description="Send red embed")
+@app_commands.describe(text="متن")
+async def lose(interaction: discord.Interaction, text: str):
+    await interaction.response.defer()
+    embed = discord.Embed(title=text, color=0xe74c3c)
+    await interaction.followup.send(embed=embed)
 
 # ================= READY =================
 @bot.event
